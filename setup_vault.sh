@@ -2,6 +2,7 @@
 
 # Vault Transform Secret Engine Setup Script
 # This script sets up the Transform Secret Engine in Vault for credit card encryption
+# Creates a custom FPE transformation for credit card numbers
 
 set -e
 
@@ -9,7 +10,11 @@ echo "Setting up Vault Transform Secret Engine..."
 
 # 1. Enable the Transform Secret Engine
 echo "Enabling Transform Secret Engine..."
-vault secrets enable transform
+if vault secrets list | grep -q "transform/"; then
+    echo "Transform Secret Engine already enabled, skipping..."
+else
+    vault secrets enable transform
+fi
 
 # 2. Create the alphabet for numeric characters
 echo "Creating numeric alphabet..."
@@ -35,11 +40,11 @@ echo "Creating transform role with custom creditcard-fpe transformation..."
 vault write transform/role/creditcard-transform \
   transformations=creditcard-fpe
 
-# 3. Create a policy for the Cloud Function
+# 6. Create a policy for the Cloud Function
 echo "Creating policy for Cloud Function..."
 vault policy write transform-policy transform-policy.hcl
 
-# 4. Create a token with the policy (optional - better to use auth methods in production)
+# 7. Create a token with the policy (optional - better to use auth methods in production)
 echo "Creating token with transform policy..."
 VAULT_TOKEN=$(vault token create -policy=transform-policy -format=json | jq -r '.auth.client_token')
 

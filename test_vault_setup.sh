@@ -5,7 +5,7 @@
 
 set -e
 
-echo "🧪 Testing Vault Transform Secret Engine setup and functionality..."
+echo "🧪 Testing Vault Transform Secret Engine with custom FPE transformation..."
 
 # Check if Vault is accessible
 if ! vault status &>/dev/null; then
@@ -64,7 +64,7 @@ echo "🎉 All tests passed! Vault Transform Secret Engine is working correctly.
 echo ""
 echo "📊 Summary:"
 echo "  ✅ Vault Transform Secret Engine enabled"
-echo "  ✅ Built-in creditcardnumber transformation working"
+echo "  ✅ Custom FPE transformation working"
 echo "  ✅ Role 'creditcard-transform' created and functional"
 echo "  ✅ Policy 'transform-policy' created"
 echo "  ✅ Encryption/Decryption tested with multiple credit card numbers"
