@@ -39,9 +39,12 @@ This implementation provides a complete solution for integrating Hashicorp Vault
 - **Custom Credit Card Transformation**: Uses a custom FPE transformation optimized for credit card number format
 - **Format Preserving Encryption (FPE)**: Maintains the original format of credit card numbers
 - **BigQuery Integration**: Seamless integration with BigQuery remote functions
+- **Real Credit Card Queries**: Query encrypted data using original credit card numbers as input
+- **Interactive Query Tools**: CLI tools and demo scripts for hands-on exploration
 - **Secure Communication**: Uses Vault's API for all encryption/decryption operations
 - **Error Handling**: Comprehensive error handling and logging
 - **Health Monitoring**: Health check endpoint for monitoring
+- **Docker Development Environment**: Complete local setup with all services
 
 ### Setup Instructions
 
@@ -130,6 +133,46 @@ OPTIONS (
 #### 4. Set Up BigQuery Remote Functions
 
 Run the SQL commands in `bigquery_setup.sql` to create the remote functions in BigQuery.
+
+## Local Development Environment
+
+For testing and development, this project includes a complete Docker-based environment that runs all services locally.
+
+### Quick Start with Docker
+
+```bash
+# Start all services
+./scripts/manage.sh start
+
+# Check service status
+./scripts/manage.sh status
+
+# Run interactive query tool
+./scripts/manage.sh interactive
+
+# Run comprehensive demo
+./scripts/manage.sh demo-encrypted
+
+# Stop all services
+./scripts/manage.sh stop
+```
+
+### Services Included
+
+- **Vault**: HashiCorp Vault with Transform Secret Engine (port 8200)
+- **BigQuery Emulator**: Local BigQuery simulator (port 9050)
+- **Cloud Function**: Google Cloud Functions Framework (port 8080)
+
+### Sample Data and Demos
+
+The local environment includes:
+
+- Pre-configured sample transaction data
+- Interactive query tools 
+- Comprehensive demos showing encrypted data workflows
+- Analytics examples on encrypted datasets
+
+For detailed documentation on querying encrypted data, see [`docs/encrypted_queries.md`](docs/encrypted_queries.md).
 
 ### Usage Examples
 

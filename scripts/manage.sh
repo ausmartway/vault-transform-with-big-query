@@ -257,6 +257,41 @@ demo_encrypted_queries() {
     python scripts/query_encrypted_data.py
 }
 
+# Function to demonstrate BigQuery-Cloud Function connection
+demo_connection() {
+    print_status "Demonstrating BigQuery-Cloud Function connection..."
+    
+    if [ ! -f scripts/bigquery_connection_demo.py ]; then
+        print_error "BigQuery connection demo script not found"
+        exit 1
+    fi
+    
+    python scripts/bigquery_connection_demo.py
+}
+
+# Function to run interactive query tool
+interactive_query() {
+    print_status "Starting interactive query tool..."
+    
+    if [ ! -f scripts/interactive_query.py ]; then
+        print_error "Interactive query tool not found"
+        exit 1
+    fi
+    
+    # Check if services are running
+    if ! curl -s http://localhost:9050 &> /dev/null; then
+        print_error "BigQuery emulator is not running. Start it first with: $0 start"
+        exit 1
+    fi
+    
+    if ! curl -s http://localhost:8080 &> /dev/null; then
+        print_error "Cloud Function is not running. Start it first with: $0 start"
+        exit 1
+    fi
+    
+    python scripts/interactive_query.py
+}
+
 # Function to run tests
 run_tests() {
     print_status "Running function tests..."
@@ -291,6 +326,8 @@ show_help() {
     echo "  setup-bigquery               Setup BigQuery sample data"
     echo "  test-bigquery                Run BigQuery test queries"
     echo "  demo-encrypted               Demo querying encrypted data with real card numbers"
+    echo "  demo-connection              Show how BigQuery connects to Cloud Function"
+    echo "  interactive                  Interactive query tool for encrypted data"
     echo "  clean                        Clean up Docker containers and volumes"
     echo "  help                         Show this help message"
     echo ""
@@ -348,6 +385,12 @@ main() {
             ;;
         demo-encrypted)
             demo_encrypted_queries
+            ;;
+        demo-connection)
+            demo_connection
+            ;;
+        interactive)
+            interactive_query
             ;;
         clean)
             print_status "Cleaning up Docker containers and volumes..."
