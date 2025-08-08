@@ -1,0 +1,3 @@
+#!/bin/bash
+# Simple convenience script - forwards all arguments to the main management script
+./scripts/manage.sh "$@"

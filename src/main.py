@@ -1,7 +1,6 @@
 import os
 import json
 import requests
-from flask import Flask, request, jsonify
 from typing import Dict, Any, Optional
 import logging
 
@@ -9,13 +8,11 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
-
 class VaultTransformClient:
     """Client for interacting with Hashicorp Vault Transform Secret Engine"""
     
     def __init__(self):
-        self.vault_url = os.environ.get('VAULT_URL', 'https://vault.example.com')
+        self.vault_url = os.environ.get('VAULT_ADDR', 'https://vault.example.com')
         self.vault_token = os.environ.get('VAULT_TOKEN')
         self.vault_namespace = os.environ.get('VAULT_NAMESPACE', '')
         self.transform_role = os.environ.get('VAULT_TRANSFORM_ROLE', 'creditcard-transform')
@@ -104,10 +101,9 @@ class VaultTransformClient:
 # Initialize Vault client
 vault_client = VaultTransformClient()
 
-@app.route('/encrypt', methods=['POST'])
-def encrypt_credit_card():
+def encrypt_credit_card(request):
     """
-    BigQuery remote function endpoint for encrypting credit card numbers
+    Cloud Function endpoint for encrypting credit card numbers
     
     Expected request format from BigQuery:
     {
@@ -121,10 +117,10 @@ def encrypt_credit_card():
     }
     """
     try:
-        request_data = request.get_json()
+        request_data = request.get_json(silent=True)
         
         if not request_data or 'calls' not in request_data:
-            return jsonify({"error": "Invalid request format"}), 400
+            return {"error": "Invalid request format"}, 400
         
         calls = request_data['calls']
         replies = []
@@ -148,16 +144,15 @@ def encrypt_credit_card():
             "replies": replies
         }
         
-        return jsonify(response)
+        return response
         
     except Exception as e:
         logger.error(f"Error in encrypt endpoint: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        return {"error": "Internal server error"}, 500
 
-@app.route('/decrypt', methods=['POST'])
-def decrypt_credit_card():
+def decrypt_credit_card(request):
     """
-    BigQuery remote function endpoint for decrypting credit card numbers
+    Cloud Function endpoint for decrypting credit card numbers
     
     Expected request format from BigQuery:
     {
@@ -171,10 +166,10 @@ def decrypt_credit_card():
     }
     """
     try:
-        request_data = request.get_json()
+        request_data = request.get_json(silent=True)
         
         if not request_data or 'calls' not in request_data:
-            return jsonify({"error": "Invalid request format"}), 400
+            return {"error": "Invalid request format"}, 400
         
         calls = request_data['calls']
         replies = []
@@ -198,33 +193,40 @@ def decrypt_credit_card():
             "replies": replies
         }
         
-        return jsonify(response)
+        return response
         
     except Exception as e:
         logger.error(f"Error in decrypt endpoint: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+        return {"error": "Internal server error"}, 500
 
-@app.route('/health', methods=['GET'])
-def health_check():
+def health_check(request):
     """Health check endpoint"""
-    return jsonify({"status": "healthy"}), 200
+    return {"status": "healthy"}, 200
 
 def vault_transform_bigquery(request):
     """
-    Google Cloud Function entry point for HTTP requests
-    This function handles both encryption and decryption based on the endpoint path
+    Main Google Cloud Function entry point for HTTP requests
+    This function handles both encryption and decryption based on the request path
     """
-    # Route the request to the appropriate Flask app endpoint
-    with app.test_request_context(path=request.path, method=request.method, 
-                                  data=request.get_data(), headers=request.headers):
-        try:
-            # Process the request through Flask app
-            response = app.full_dispatch_request()
-            return response
-        except Exception as e:
-            logger.error(f"Error processing request: {str(e)}")
-            return jsonify({"error": "Internal server error"}), 500
+    try:
+        # For Functions Framework, we need to handle the request object differently
+        request_data = request.get_json(silent=True)
+        path = request.path if hasattr(request, 'path') else '/'
+        
+        # Route based on path
+        if '/encrypt' in path:
+            return encrypt_credit_card(request)
+        elif '/decrypt' in path:
+            return decrypt_credit_card(request)
+        elif '/health' in path:
+            return health_check(request)
+        else:
+            # Default to encrypt for backward compatibility
+            return encrypt_credit_card(request)
+        
+    except Exception as e:
+        logger.error(f"Error processing Cloud Function request: {str(e)}")
+        return {"error": "Internal server error"}, 500
 
-if __name__ == "__main__":
-    # For local testing
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+# For Google Cloud Functions Framework local testing
+# The functions can be individually targeted or routed through the main function

@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+WORKDIR /workspace
+
+# Install Functions Framework first
+RUN pip install functions-framework
+
+# Copy requirements and install dependencies
+COPY src/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy source code
+COPY src/ .
+
+# Expose port
+EXPOSE 8080
+
+# Use Functions Framework for Cloud Function emulation
+CMD ["functions-framework", "--target=vault_transform_bigquery", "--host=0.0.0.0", "--port=8080", "--source=/workspace/main.py"]
