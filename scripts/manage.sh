@@ -257,6 +257,24 @@ demo_encrypted_queries() {
     python scripts/query_encrypted_data.py
 }
 
+# Function to test BigQuery emulator remote function capabilities
+test_emulator_capabilities() {
+    print_status "Testing BigQuery emulator remote function capabilities..."
+    
+    if [ ! -f scripts/test_emulator_remote_functions.py ]; then
+        print_error "Emulator test script not found"
+        exit 1
+    fi
+    
+    # Check if BigQuery is running
+    if ! curl -s http://localhost:9050 &> /dev/null; then
+        print_error "BigQuery emulator is not running. Start it first with: $0 start"
+        exit 1
+    fi
+    
+    python scripts/test_emulator_remote_functions.py
+}
+
 # Function to demonstrate BigQuery-Cloud Function connection
 demo_connection() {
     print_status "Demonstrating BigQuery-Cloud Function connection..."
@@ -327,6 +345,7 @@ show_help() {
     echo "  test-bigquery                Run BigQuery test queries"
     echo "  demo-encrypted               Demo querying encrypted data with real card numbers"
     echo "  demo-connection              Show how BigQuery connects to Cloud Function"
+    echo "  test-emulator                Test BigQuery emulator remote function capabilities"
     echo "  interactive                  Interactive query tool for encrypted data"
     echo "  clean                        Clean up Docker containers and volumes"
     echo "  help                         Show this help message"
@@ -388,6 +407,9 @@ main() {
             ;;
         demo-connection)
             demo_connection
+            ;;
+        test-emulator)
+            test_emulator_capabilities
             ;;
         interactive)
             interactive_query
