@@ -1,32 +1,33 @@
 # Production Deployment Guide
 
-## Quick Start (TL;DR)
+This guide shows you how to deploy the **Vault Transform + BigQuery** integration to Google Cloud Platform.
+
+## Quick Start
 
 1. **Setup prerequisites**:
+
    ```bash
    cd deploy
    ./setup_prerequisites.sh
    ```
 
 2. **Configure environment**:
+
    ```bash
    cp .env.template .env
-   # Edit .env with your values
+   # Edit .env with your HCP Vault and GCP details
    source .env
    ```
 
 3. **Deploy everything**:
+
    ```bash
    ./deploy_production.sh
    ```
 
-## Overview
+## Architecture
 
-This guide shows you how to deploy the **Vault Transform + BigQuery** integration to real Google Cloud Platform, replacing the local emulator environment.
-
-### Architecture
-
-```
+```text
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   BigQuery      │───▶│ Cloud Function  │───▶│ HashiCorp Vault │
 │                 │    │                 │    │                 │
@@ -36,63 +37,45 @@ This guide shows you how to deploy the **Vault Transform + BigQuery** integratio
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-### Components
-
-1. **Cloud Function**: Python function that handles BigQuery remote function calls
-2. **BigQuery Remote Functions**: SQL functions that call the Cloud Function
-3. **Vault Transform Engine**: Handles encryption/decryption with FPE
-4. **Sample Data**: Fraud detection dataset with encrypted credit cards
-
 ## Prerequisites
 
-### Required Accounts & Access
+### Required Services
 
-- **Google Cloud Platform account** with billing enabled
-- **HashiCorp Cloud Platform (HCP) Vault** (Standard or Plus tier for Transform engine)
-- **Project Owner or Editor** role in GCP
+- **Google Cloud Platform** account with billing enabled
+- **HCP Vault** (Standard/Plus tier for Transform engine)
+- **Project Owner/Editor** role in GCP
 - **BigQuery Admin** permissions
 
-⚠️ **CRITICAL**: Cloud Functions cannot access local Vault instances. You **must** use HCP Vault or another cloud-accessible Vault deployment.
+⚠️ **CRITICAL**: Must use HCP Vault or cloud-accessible Vault (not localhost)
 
 ### Required Tools
 
 - `gcloud` CLI (Google Cloud SDK)
 - `bq` CLI (BigQuery command-line tool)
 - `python3` with pip
-- `curl`
 
-### Environment Variables
+## HCP Vault Setup
 
-```bash
-export PROJECT_ID=your-gcp-project-id
-export VAULT_ADDR=https://your-hcp-vault-cluster.vault.aws.hashicorp.cloud:8200
-export VAULT_TOKEN=your-hcp-vault-token
-export VAULT_ROLE=creditcard-transform
-export VAULT_TRANSFORMATION=creditcard-fpe
-```
+If you don't have HCP Vault configured yet:
 
-⚠️ **Important**: `VAULT_ADDR` must point to HCP Vault, not localhost!
+1. **Create HCP Vault Cluster** (Standard or Plus tier)
+2. **Configure Transform Engine**:
 
-## Step-by-Step Deployment
+   ```bash
+   export VAULT_ADDR=https://your-hcp-vault.vault.aws.hashicorp.cloud:8200
+   export VAULT_TOKEN=your-admin-token
+   export VAULT_NAMESPACE=admin
+   
+   ./setup_hcp_transform.sh
+   ```
 
-### Step 1: Prerequisites Setup
+3. **Get service token** for production use
 
-Run the prerequisites checker:
+See `HCP_QUICK_SETUP.md` for detailed HCP Vault setup instructions.
 
-```bash
-cd deploy
-./setup_prerequisites.sh
-```
+## Environment Configuration
 
-This will:
-- Check if gcloud CLI is installed
-- Verify authentication status
-- Create environment template
-- Validate prerequisites
-
-### Step 2: Environment Configuration
-
-Create your environment file:
+Create and configure your environment file:
 
 ```bash
 cp .env.template .env
@@ -258,14 +241,16 @@ WHERE encrypted_credit_card = vault_functions.encrypt_credit_card('4111111111111
 
 ### Common Issues
 
-**1. Function deployment fails**
+#### 1. Function deployment fails
+
 ```bash
 # Check quota and permissions
 gcloud functions deploy --help
 gcloud auth list
 ```
 
-**2. BigQuery external connection fails**
+#### 2. BigQuery external connection fails
+
 ```bash
 # Verify function URL is accessible
 curl -X GET "$FUNCTION_URL"
@@ -274,7 +259,8 @@ curl -X GET "$FUNCTION_URL"
 bq ls
 ```
 
-**3. Vault connection issues**
+#### 3. Vault connection issues
+
 ```bash
 # Test Vault connectivity
 curl -H "X-Vault-Token: $VAULT_TOKEN" "$VAULT_ADDR/v1/sys/health"
@@ -343,6 +329,7 @@ To remove all deployed resources:
 ```
 
 This will delete:
+
 - Cloud Function
 - BigQuery dataset and tables
 - External connections
@@ -388,7 +375,7 @@ bq query "SELECT vault_functions.encrypt_credit_card('4111111111111111')"
 - **External Connection**: `vault-connection`
 - **Remote Functions**: `encrypt_credit_card`, `decrypt_credit_card`
 
-### Environment Variables
+### Key Environment Variables
 
 ```bash
 PROJECT_ID=your-gcp-project-id

@@ -172,7 +172,6 @@ curl -s -H "X-Vault-Token: $VAULT_TOKEN" \
    vault write auth/approle/role/bigquery-function \
        token_policies="creditcard-policy" \
        token_ttl=1h \
-       token_max_ttl=4h
    
    # Get role ID and secret ID for Cloud Function
    vault read auth/approle/role/bigquery-function/role-id
@@ -197,12 +196,14 @@ curl -s -H "X-Vault-Token: $VAULT_TOKEN" \
 ### Common Issues
 
 **Connection Timeout**:
+
 ```bash
 # Check if URL is accessible
 curl -v "$VAULT_ADDR/v1/sys/health"
 ```
 
 **Authentication Errors**:
+
 ```bash
 # Verify token is valid
 curl -H "X-Vault-Token: $VAULT_TOKEN" \
@@ -210,6 +211,7 @@ curl -H "X-Vault-Token: $VAULT_TOKEN" \
 ```
 
 **Transform Engine Not Available**:
+
 - Ensure you're using Standard or Plus tier
 - Verify transform engine is enabled: `vault secrets list`
 

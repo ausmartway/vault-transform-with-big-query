@@ -2,7 +2,8 @@
 
 ## Current Status: 99% Complete - Only IAM Permissions Remaining
 
-### ✅ What's Already Working:
+### ✅ What's Already Working
+
 1. **HCP Vault**: Fully configured with Transform engine
 2. **Cloud Function**: Successfully deployed at `https://vault-transform-function-cvb4eibhuq-uc.a.run.app`
 3. **BigQuery**: Datasets and connection created
@@ -11,12 +12,14 @@
 ### ❌ Remaining Blocker: IAM Permissions
 
 User `yulei@hashicorp.com` lacks the following permissions:
+
 - `cloudfunctions.functions.setIamPolicy` - needed to grant BigQuery access to Cloud Function
 - `bigquery.connections.delegate` - needed to create remote functions using the connection
 
 ## 🔧 Required Actions (Must be run by Project Owner/Admin)
 
 ### Step 1: Grant Cloud Function Invoke Permission to BigQuery
+
 ```bash
 gcloud functions add-iam-policy-binding vault-transform-function \
     --region=us-central1 \
@@ -26,12 +29,14 @@ gcloud functions add-iam-policy-binding vault-transform-function \
 ```
 
 ### Step 2: Create BigQuery Remote Functions
+
 ```bash
 cd /Users/yuleiliu/unfinished-projects/vault-transform-with-big-query/deploy
 bq query --use_legacy_sql=false < create_encrypt_function.sql
 ```
 
 Content of `create_encrypt_function.sql`:
+
 ```sql
 CREATE OR REPLACE FUNCTION `hc-5c7132af39e94c9ea03d2710265.vault_functions.encrypt_credit_card`(credit_card STRING)
 RETURNS STRING
@@ -43,6 +48,7 @@ OPTIONS (
 ```
 
 ### Step 3: Create Decryption Function
+
 ```sql
 CREATE OR REPLACE FUNCTION `hc-5c7132af39e94c9ea03d2710265.vault_functions.decrypt_credit_card`(encrypted_credit_card STRING)
 RETURNS STRING
@@ -92,7 +98,7 @@ gcloud projects add-iam-policy-binding hc-5c7132af39e94c9ea03d2710265 \
 
 ## 🏗️ Architecture Summary
 
-```
+```text
 BigQuery Remote Functions
     ↓ (Authenticated HTTP calls via bqcx-786265264300-5upk@ service account)
 Cloud Function: vault-transform-function
@@ -119,12 +125,14 @@ Encrypted/Decrypted Credit Card Numbers
 ## 🎯 Expected Results
 
 After admin setup, these queries should work:
+
 - `4111111111111111` → `3003078876416946` (encryption)
 - `3003078876416946` → `4111111111111111` (decryption)
 
 ## ⚡ Quick Test Command
 
 Once setup is complete:
+
 ```bash
 bq query --use_legacy_sql=false "SELECT vault_functions.encrypt_credit_card('4111111111111111')"
 ```

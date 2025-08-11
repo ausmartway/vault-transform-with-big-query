@@ -1,93 +1,108 @@
 # Project Structure
 
-This project provides a Google Cloud Function that integrates Hashicorp Vault Transform Secret Engine with BigQuery for secure fraud detection workflows.
+A production-ready integration for HashiCorp Vault Transform Secret Engine with BigQuery for secure fraud detection workflows.
 
 ## 📁 Directory Structure
 
 ```
 vault-transform-with-big-query/
-├── README.md                   # Main project documentation
-├── .env                        # Environment variables (local development)
-├── .envrc                      # direnv configuration
-├── .gitignore                  # Git ignore patterns
-│
-├── src/                        # Source code
-│   ├── main.py                 # Main Cloud Function (encrypt/decrypt endpoints)
-│   └── requirements.txt        # Python dependencies
-│
-├── docker/                     # Docker configuration
-│   ├── docker-compose.yml      # Multi-service container setup
-│   └── Dockerfile.dev          # Development container for Cloud Function
-│
-├── scripts/                    # Automation scripts
-│   └── manage.sh               # Single comprehensive management script
-│
-├── config/                     # Configuration files
-│   └── bigquery-data/          # BigQuery simulator test data
-│       └── data.yaml           # Sample datasets and tables
-│
-├── tests/                      # Test scripts
-│   └── test_direct.py          # Direct testing of Cloud Function
-│
-└── docs/                       # Documentation
-    └── test_queries.md         # BigQuery SQL test queries
+├── README.md                           # Main project documentation
+├── deploy/                            # Production deployment
+│   ├── deploy_production.sh          #   Main deployment script
+│   ├── setup_prerequisites.sh        #   Prerequisites checker
+│   ├── setup_hcp_transform.sh        #   HCP Vault configuration
+│   ├── .env.template                 #   Environment template
+│   ├── README.md                     #   Deployment guide
+│   ├── ADMIN_SETUP_REQUIRED.md       #   Final admin steps
+│   ├── HCP_QUICK_SETUP.md            #   Quick HCP Vault setup
+│   ├── activate.sh                   #   Environment activation
+│   ├── service_token.txt             #   HCP Vault service token
+│   ├── bigquery_setup.sql            #   BigQuery schema
+│   ├── create_encrypt_function.sql   #   Function creation SQL
+│   └── cloud-function/               #   Cloud Function source
+│       ├── main.py                   #     Function implementation
+│       └── requirements.txt          #     Python dependencies
+├── sql/                              # SQL scripts
+│   └── bigquery_setup.sql            #   BigQuery schema and functions
+├── scripts/                          # Utility scripts
+│   ├── interactive_query.py          #   Interactive query tool
+│   └── query_encrypted_data.py       #   Data query examples
+└── docs/                             # Documentation
+    ├── PROJECT_STRUCTURE.md          #   This file
+    └── encrypted_queries.md          #   Query examples
 ```
 
 ## 🚀 Quick Start
 
-### Simple Commands
+### Prerequisites
+- Google Cloud Platform account with billing enabled
+- HCP Vault (Standard/Plus tier for Transform engine)
+- Project Owner/Editor role in GCP
+
+### Simple Deployment
 ```bash
-# Start everything
-make start
-# or
-./run start
+# 1. Setup prerequisites
+cd deploy
+./setup_prerequisites.sh
 
-# Start just Vault
-make vault  
-# or
-./run start vault
+# 2. Configure environment
+cp .env.template .env
+# Edit .env with your HCP Vault and GCP details
+source .env
 
-# Stop everything
-make stop
-# or  
-./run stop
-
-# Check status
-make status
-# or
-./run status
+# 3. Deploy everything
+./deploy_production.sh
 ```
+
+## 🎯 Current Status: Production Ready
+
+**✅ Key Components:**
+- **HCP Vault Integration**: Transform engine for format-preserving encryption
+- **Cloud Function**: Python function handling BigQuery remote function calls
+- **BigQuery Remote Functions**: SQL-callable encrypt/decrypt endpoints
+- **Automated Deployment**: Complete GCP deployment script
+- **Comprehensive Documentation**: Setup guides and examples
+
+## 🌐 Production Endpoints
+
+After deployment, you'll have:
+- **Cloud Function**: `https://vault-transform-function-{hash}.a.run.app`
+- **BigQuery Dataset**: `{project}.fraud_detection`
+- **Remote Functions**: `encrypt_credit_card()`, `decrypt_credit_card()`
 
 ## 🧪 Testing
 
-### Direct Function Testing
+### Function Test
 ```bash
-make test
-# or
-./run test
+curl -X POST "$FUNCTION_URL" \
+    -H "Content-Type: application/json" \
+    -d '{"requestId": "test-1", "calls": [["4111111111111111"]]}'
 ```
 
-### BigQuery SQL Testing
-1. Start the complete environment: `make start` or `./run start`
-2. Open BigQuery simulator at localhost:9050
-3. Run queries from `docs/test_queries.md`
+### BigQuery Test
+```bash
+bq query "SELECT vault_functions.encrypt_credit_card('4111111111111111')"
+```
 
-## 🌐 Service Endpoints
+### Interactive Testing
+```bash
+python3 scripts/interactive_query.py
+```
 
-- **Vault UI**: http://localhost:8200
-- **BigQuery Simulator**: http://localhost:9050
-- **Cloud Function**: http://localhost:8080
+## 📦 Key Features
+
+- **Format-Preserving Encryption**: Credit card numbers remain 16 digits
+- **Production Ready**: Deployed to Google Cloud Platform
+- **Zero Trust**: All data encrypted at application layer
+- **SQL Transparent**: Use encryption/decryption in BigQuery SQL queries
+- **Secure**: HCP Vault managed encryption keys and policies
+- **Scalable**: Cloud Function auto-scales based on BigQuery demand
 
 ## 📝 Configuration
 
-Environment variables are managed in `.env`:
-- `VAULT_LICENSE`: Your Hashicorp Vault Enterprise license
-- `VAULT_ADDR`: Vault server address (default: http://localhost:8200)
-- `PROJECT_ID`: BigQuery project ID (default: test-project)
-
-## 📦 Components
-
-- **Vault Transform Engine**: Credit card encryption/decryption
-- **BigQuery Remote Functions**: SQL-callable encrypt/decrypt endpoints
-- **Fraud Detection Simulator**: Sample datasets for testing
-- **Local Development Environment**: Complete Docker-based setup
+Environment variables in `deploy/.env`:
+- `PROJECT_ID`: Your GCP project ID
+- `VAULT_ADDR`: HCP Vault server address
+- `VAULT_TOKEN`: HCP Vault authentication token
+- `VAULT_ROLE`: Vault role for transform operations
+- `VAULT_TRANSFORMATION`: Transform engine transformation name
