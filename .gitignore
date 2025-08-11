@@ -10,6 +10,7 @@
 *key*
 vault-token*
 service-account*.json
+transactions_*.csv
 
 # Python
 __pycache__/

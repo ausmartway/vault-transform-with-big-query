@@ -40,10 +40,13 @@ check_environment() {
         exit 1
     fi
     
-    if [ -z "$VAULT_TOKEN" ]; then
-        print_error "VAULT_TOKEN environment variable not set"
-        echo "Please set: export VAULT_TOKEN=your-hcp-vault-token"
-        exit 1
+    if [ -z "$VAULT_CLIENT_TOKEN" ]; then
+        print_warning "VAULT_CLIENT_TOKEN not set, using VAULT_TOKEN (admin token)"
+        print_warning "For production, generate a client token with: ./setup-transform.sh"
+        CLIENT_TOKEN="$VAULT_TOKEN"
+    else
+        CLIENT_TOKEN="$VAULT_CLIENT_TOKEN"
+        print_success "Using client token for Cloud Function deployment"
     fi
     
     if [ -z "$VAULT_NAMESPACE" ]; then
@@ -107,6 +110,9 @@ enable_apis() {
 prepare_function_source() {
     print_status "Preparing Cloud Function source..."
     
+    # Change to deploy directory
+    cd "$(dirname "$0")"
+    
     # Create function directory
     mkdir -p cloud-function
     
@@ -136,17 +142,17 @@ deploy_function() {
     gcloud functions deploy vault-transform-function \
         --gen2 \
         --runtime=python311 \
-        --region=us-central1 \
+        --region=australia-southeast1 \
         --source=cloud-function \
         --entry-point=vault_transform_bigquery \
         --trigger-http \
         --memory=512MB \
         --timeout=60s \
-        --set-env-vars="VAULT_ADDR=${VAULT_ADDR},VAULT_TOKEN=${VAULT_TOKEN},VAULT_NAMESPACE=${VAULT_NAMESPACE},VAULT_ROLE=creditcard-transform,VAULT_TRANSFORMATION=creditcard-fpe"
+        --set-env-vars="VAULT_ADDR=${VAULT_ADDR},VAULT_CLIENT_TOKEN=${CLIENT_TOKEN},VAULT_NAMESPACE=${VAULT_NAMESPACE},VAULT_ROLE=creditcard-transform,VAULT_TRANSFORMATION=creditcard-fpe"
     
     # Get function URL
     FUNCTION_URL=$(gcloud functions describe vault-transform-function \
-        --region=us-central1 \
+        --region=australia-southeast1 \
         --format="value(serviceConfig.uri)")
     
     print_success "Cloud Function deployed at: $FUNCTION_URL"
@@ -154,7 +160,7 @@ deploy_function() {
     # Grant invoker permission to current user
     print_status "Setting up IAM permissions..."
     gcloud functions add-iam-policy-binding vault-transform-function \
-        --region=us-central1 \
+        --region=australia-southeast1 \
         --member="user:${USER_EMAIL}" \
         --role="roles/cloudfunctions.invoker"
     
@@ -259,7 +265,7 @@ setup_remote_functions() {
     
     # Create BigQuery SQL for connection setup
     cat > connection_setup.sql << EOF
-CREATE OR REPLACE EXTERNAL CONNECTION \`${PROJECT_ID}.us-central1.vault-connection\`
+CREATE OR REPLACE EXTERNAL CONNECTION \`${PROJECT_ID}.australia-southeast1.vault-connection\`
 OPTIONS (
   type = 'CLOUD_RESOURCE',
   endpoint = '${FUNCTION_URL}'
@@ -271,7 +277,7 @@ EOF
     
     # Get the connection service account
     print_status "Getting BigQuery connection service account..."
-    CONNECTION_SA=$(bq show connection ${PROJECT_ID}.us-central1.vault-connection --format=json | python3 -c "
+    CONNECTION_SA=$(bq show connection ${PROJECT_ID}.australia-southeast1.vault-connection --format=json | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 print(data['cloudResource']['serviceAccountId'])
@@ -282,7 +288,7 @@ print(data['cloudResource']['serviceAccountId'])
     # Grant the connection service account permission to invoke the function
     print_status "Granting BigQuery service account function invoke permission..."
     gcloud functions add-iam-policy-binding vault-transform-function \
-        --region=us-central1 \
+        --region=australia-southeast1 \
         --member="serviceAccount:${CONNECTION_SA}" \
         --role="roles/cloudfunctions.invoker"
     
@@ -291,7 +297,7 @@ print(data['cloudResource']['serviceAccountId'])
 -- Create encryption function
 CREATE OR REPLACE FUNCTION \`${PROJECT_ID}.vault_functions.encrypt_credit_card\`(credit_card STRING)
 RETURNS STRING
-REMOTE WITH CONNECTION \`${PROJECT_ID}.us-central1.vault-connection\`
+REMOTE WITH CONNECTION \`${PROJECT_ID}.australia-southeast1.vault-connection\`
 OPTIONS (
   endpoint = '${FUNCTION_URL}',
   max_batching_rows = 100
@@ -300,7 +306,7 @@ OPTIONS (
 -- Create decryption function  
 CREATE OR REPLACE FUNCTION \`${PROJECT_ID}.vault_functions.decrypt_credit_card\`(encrypted_credit_card STRING)
 RETURNS STRING
-REMOTE WITH CONNECTION \`${PROJECT_ID}.us-central1.vault-connection\`
+REMOTE WITH CONNECTION \`${PROJECT_ID}.australia-southeast1.vault-connection\`
 OPTIONS (
   endpoint = '${FUNCTION_URL}',
   max_batching_rows = 100
@@ -493,7 +499,7 @@ case "${1:-deploy}" in
         ;;
     clean)
         print_status "Cleaning up resources..."
-        gcloud functions delete vault-transform-function --region=us-central1 --quiet || true
+        gcloud functions delete vault-transform-function --region=australia-southeast1 --quiet || true
         bq rm -r -f ${PROJECT_ID}:fraud_detection || true
         print_success "Cleanup completed"
         ;;
